@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import jwt from 'jsonwebtoken'
-import { validateEmail, validateLogin, validatePassword, validateRegister, validateToken } from '../validators/authValidators';
+import { validateAuthUpgrade, validateEmail, validateLogin, validatePassword, validateRegister, validateToken } from '../validators/authValidators';
 import { AppError } from '../utils/AppError';
 import { User } from '../models/User';
 import { signToken, verifyToken } from '../services/tokenServices';
@@ -57,6 +57,40 @@ export async function login(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+export const upgradeToContributor = async (req, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user.userId;
+
+    const { fullname, socialAccounts } = validateAuthUpgrade.parse(req.body);
+
+    const updateData: any = { role: 'contributor', fullname };
+
+    if (socialAccounts) {
+      updateData.socialAccounts = socialAccounts;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
+
+    if (!updatedUser) {
+      return next(new AppError('User not found', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Account upgraded to contributor',
+      user: updatedUser
+    });
+  } catch (err:any) {
+    if (err instanceof z.ZodError) {
+      const message: string = err.issues.map(issue => issue.message).join(', ');
+      return next(new AppError(message, 400));
+    }
+    next(new AppError(err.message || 'Unable to upgrade account', 500));
+  }
+};
+
+
+// Email Verification
 export const verifyEmailToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { emailToken } = req.query;

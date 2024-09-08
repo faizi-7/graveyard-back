@@ -3,6 +3,8 @@ import { AppError } from '../utils/AppError';
 import { z } from 'zod';
 import { validateIdea, validateVote, validateParams, validateIdeaUpdate } from '../validators/ideaValidators'; 
 import { Idea } from '../models/Idea';
+import { User } from '../models/User';
+import { validateObjectId } from '../validators/commentValidators';
 
 // Create a new idea
 export const createIdea = async (req: Request, res: Response, next: NextFunction) => {
@@ -123,5 +125,32 @@ export const voteIdea = async (req: Request, res: Response, next: NextFunction) 
     } else {
       next(new AppError(err.message || 'Unable to register vote', 500));
     }
+  }
+};
+
+export const addFavoriteIdea = async (req, res: Response, next: NextFunction) => {
+  try {
+    const { ideaId } = req.params;
+    validateObjectId.parse(ideaId)
+    const idea = await Idea.findById(ideaId);
+    if (!idea) {
+      return next(new AppError('Idea not found', 404));
+    }
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+    if (user.favorites.includes(ideaId)) {
+      return next(new AppError('Idea is already in your favorites', 400));
+    }
+    user.favorites.push(ideaId);
+    await user.save();
+    res.status(200).json({
+      status: 'success',
+      message: 'Idea added to favorites',
+      favorites: user.favorites,
+    });
+  } catch (err: any) {
+    next(new AppError(err.message || 'Failed to add idea to favorites', 500));
   }
 };

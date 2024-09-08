@@ -1,10 +1,10 @@
 import { Router } from 'express'
-import { createIdea, getAllIdeas, getIdea, updateIdea, deleteIdea, voteIdea } from '../controllers/ideaController';
-import { checkAuthBasic } from '../middleware/checkAuth';
+import { createIdea, getAllIdeas, getIdea, updateIdea, deleteIdea, voteIdea, addFavoriteIdea } from '../controllers/ideaController';
+import { checkAuthBasic, checkAuthPro } from '../middleware/checkAuth';
 const router= Router()
 
 // POST -> /api/ideas/
-router.post('/',checkAuthBasic, createIdea);
+router.post('/',checkAuthPro, createIdea);
 
 // GET -> /api/ideas/
 router.get('/', getAllIdeas);
@@ -13,12 +13,15 @@ router.get('/', getAllIdeas);
 router.get('/:id', getIdea);
 
 // PUT -> /api/ideas/:id
-router.put('/:id',checkAuthBasic, updateIdea);
+router.put('/:id',checkAuthPro, updateIdea);
 
 // DELETE -> /api/ideas/:id
-router.delete('/:id',checkAuthBasic, deleteIdea);
+router.delete('/:id',checkAuthPro, deleteIdea);
 
 // POST -> /api/ideas/:id/vote
-router.post('/:id/vote',checkAuthBasic, voteIdea);
+router.post('/:id/vote',checkAuthPro, voteIdea);
+
+// POST -> /api/ideas/favorites/:ideaId
+router.post('/favorites/:ideaId', checkAuthBasic, addFavoriteIdea);
 
 export default router

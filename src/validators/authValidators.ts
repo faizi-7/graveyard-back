@@ -22,3 +22,7 @@ export const validateResetPassword = z.object({
   email: z.string().email('Invalid email address'),
   newPassword: z.string().min(6, 'Password must be at least 6 characters long'),
 })
+export const validateAuthUpgrade= z.object({
+  fullname: z.string().min(3, 'Fullname is required and should be at least 3 characters long'),
+  socialAccounts: z.record(z.string()).optional()
+});

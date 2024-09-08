@@ -1,5 +1,6 @@
 import { Router } from 'express'
-import { initiatePasswordReset, login, register, resetPassword, verifyEmail, verifyEmailToken, verifyPasswordToken,} from '../controllers/authController'
+import { initiatePasswordReset, login, register, resetPassword, upgradeToContributor, verifyEmail, verifyEmailToken, verifyPasswordToken,} from '../controllers/authController'
+import { checkAuthBasic } from '../middleware/checkAuth'
 
 const router= Router()
 
@@ -8,7 +9,8 @@ const router= Router()
 router.post('/register', register)
 // 2. POST { email, password }
 router.post('/login', login)
-
+// 3. PUT { fullname, socialAccounts}
+router.put('/upgrade', checkAuthBasic, upgradeToContributor)
 // Email Verification
 // 1. POST { email } 
 router.post('/verifymail', verifyEmail);
