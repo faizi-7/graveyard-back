@@ -15,11 +15,17 @@ export async function checkAuthBasic(req, res, next) {
   }
   try {
     const decoded = verifyToken(token)
-    const currentUser = await User.findOne({ email: decoded.email });
+    const currentUser = await User.findOne({ email: decoded.email }).lean();
     if (!currentUser) {
       return next(new AppError('The user belonging to this token no longer exists.', 401));
     }
-    req.user = currentUser;
+    const partialUser = {
+      userId: currentUser._id,
+      username: currentUser.username,
+      email: currentUser.email,
+      role: currentUser.role
+    };
+    req.user = partialUser;
     next();
   } catch (err) {
     return next(new AppError('Invalid token. Please log in again.', 401));
