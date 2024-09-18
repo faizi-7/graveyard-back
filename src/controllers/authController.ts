@@ -1,23 +1,65 @@
 import { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import jwt from 'jsonwebtoken'
-import { validateAuthUpgrade, validateEmail, validateLogin, validatePassword, validateRegister, validateToken } from '../validators/authValidators';
+import { validateAuthUpgrade, validateEmail, validateLogin, validateMailOptions, validatePassword, validateRegister, validateToken } from '../validators/authValidators';
 import { AppError } from '../utils/AppError';
 import { User } from '../models/User';
 import { signToken, verifyToken } from '../services/tokenServices';
-import { sendPasswordResetEmail, sendVerificationEmail } from '../services/mailService';
+import { sendPasswordResetEmail, sendVerificationEmail, sentContactMail } from '../services/mailService';
+import { uploadToCloudinary } from '../services/uploadService';
 
-export async function register(req: Request, res: Response, next: NextFunction) {
+export const getUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    validateRegister.parse(req.body)
-    const { username, email, password } = req.body
-    const exists = await User.findOne({ email })
+    const { id } = req.params;
+
+    const user = await User.findById(id)
+      .select('-password -email')
+      .populate('favorites');
+
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    res.status(200).json({
+      data: user,
+      message: 'User fetched successfully'
+    });
+  } catch (err: any) {
+    next(new AppError(err.message || 'Unable to fetch user', 500));
+  }
+};
+
+export async function grantUser(req, res: Response) {
+  const user = req.user;
+  res.status(200).json({
+    message: 'Protected data access granted',
+    data: user,
+  });
+};
+
+
+export async function register(req, res: Response, next: NextFunction) {
+  try {
+    const parsedData = validateRegister.parse(req.body)
+    let profilePic = ''
+    if (req.file) {
+      const base64Image = req.file.buffer.toString('base64');
+      profilePic = await uploadToCloudinary(`data:image/jpeg;base64,${base64Image}`)
+    }
+    const exists = await User.findOne({ email: req.body.email })
     if (exists) {
       return next(new AppError('User Already Exists', 403))
     }
-    const user = new User({ username, email, password })
+    let userData = { ...parsedData }
+    if (parsedData.fullname) userData['role'] = 'contributor'
+    if (profilePic) userData['profileUrl'] = profilePic
+    const user = new User(userData)
     await user.save()
-    res.status(201).send(`User Registered with id - ${user._id, user.password}`)
+
+    res.status(201).send({
+      message: "Register Successful",
+      data: userData
+    })
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       const message: string = err.issues.map(issue => issue.message).join(', ')
@@ -44,8 +86,8 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     const token = signToken(user.email)
 
     return res.status(200).json({
-      message: 'Login successful',
-      token
+      message: 'Login Successful',
+      data: token
     });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
@@ -61,14 +103,18 @@ export const upgradeToContributor = async (req, res: Response, next: NextFunctio
   try {
     const userId = req.user.userId;
 
-    const { fullname, socialAccounts } = validateAuthUpgrade.parse(req.body);
+    const { fullname, about } = validateAuthUpgrade.parse(req.body);
 
     const updateData: any = { role: 'contributor', fullname };
-
-    if (socialAccounts) {
-      updateData.socialAccounts = socialAccounts;
+    if (about) {
+      updateData.about = about
     }
-
+    let profilePic = ''
+    if (req.file) {
+      const base64Image = req.file.buffer.toString('base64');
+      profilePic = await uploadToCloudinary(`data:image/jpeg;base64,${base64Image}`)
+      updateData.profileUrl = profilePic
+    }
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
 
     if (!updatedUser) {
@@ -76,11 +122,10 @@ export const upgradeToContributor = async (req, res: Response, next: NextFunctio
     }
 
     res.status(200).json({
-      status: 'success',
-      message: 'Account upgraded to contributor',
-      user: updatedUser
+      message: 'Account Upgraded to Contributor',
+      data: updateData
     });
-  } catch (err:any) {
+  } catch (err: any) {
     if (err instanceof z.ZodError) {
       const message: string = err.issues.map(issue => issue.message).join(', ');
       return next(new AppError(message, 400));
@@ -111,17 +156,21 @@ export const verifyEmailToken = async (req: Request, res: Response, next: NextFu
     await user.save();
 
     res.status(200).json({
-      message: 'Email successfully verified',
+      message: 'Email Successfully Verified',
+      data: {
+        userId: user._id,
+        email: user.email,
+        emailVerified: user.emailVerified
+      }
     });
   } catch (err) {
     next(err);
   }
 };
 
-export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
+export const verifyEmail = async (req, res: Response, next: NextFunction) => {
   try {
-    validateEmail.parse(req.body)
-    const { email } = req.body;
+    const { email } = req.user;
 
     if (!email) {
       throw new AppError('Email is required', 400);
@@ -137,7 +186,7 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
     await sendVerificationEmail(email, emailToken as string);
 
     res.status(200).json({
-      message: 'Verification email sent successfully',
+      message: 'Verification Email Sent Successfully',
     });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
@@ -177,7 +226,7 @@ export const initiatePasswordReset = async (req: Request, res: Response, next: N
     await sendPasswordResetEmail(email, resetToken as string);
 
     res.status(200).json({
-      message: 'Password reset email sent successfully',
+      message: 'Password Reset Email Sent Successfully',
     });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
@@ -189,7 +238,7 @@ export const initiatePasswordReset = async (req: Request, res: Response, next: N
   }
 };
 
-// Step 2
+// Step 2 When user clicks on the link in the email token is send to react and it will send the request along with the req.body containing token received from this request
 export const verifyPasswordToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { resetToken } = req.query;
@@ -212,8 +261,8 @@ export const verifyPasswordToken = async (req: Request, res: Response, next: Nex
     }
 
     res.status(200).json({
-      resetToken : resetToken,
-      message: 'Password reset successfully',
+      message: 'Password Reset Token Verified',
+      data: resetToken,
     });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
@@ -253,8 +302,35 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
     await user.save();
 
     res.status(200).json({
-      message: 'Password reset successfully',
+      message: 'Password Reset Successfull',
     });
+  } catch (err: any) {
+    if (err instanceof z.ZodError) {
+      const message: string = err.issues.map(issue => issue.message).join(', ');
+      next(new AppError(message, 400));
+    } else {
+      next(new AppError(err.message || 'Unable to reset password', 500));
+    }
+  }
+};
+
+
+// Send Contact Email :
+
+export const sendContactMail = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, email, message } = validateMailOptions.parse(req.body)
+
+    const mailOptions = {
+      from: '"Contact Form" <itsfaiziqbal@gmail.com>',
+      to: '"ifaiz ideas" <itsfaiziqbal@gmail.com>',
+      replyTo: email,
+      subject: `Contact Form Submission from ${name}`,
+      text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
+    };
+
+    await sentContactMail(mailOptions);
+    res.status(200).json({ message: 'Message sent successfully!' });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       const message: string = err.issues.map(issue => issue.message).join(', ');

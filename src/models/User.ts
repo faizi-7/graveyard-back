@@ -7,10 +7,11 @@ export interface IUser extends Document {
   password: string;
   fullname : string;
   emailVerified: boolean;
-  socialAccounts: Map<string, string>;
+  profileUrl: string;
   role: 'user' | 'contributor';
   comparePassword(enteredPassword:string): Promise<boolean>
   favorites : [string];
+  about : string;
 }
 const userSchema = new Schema({
   username: { type: String, required: true }, 
@@ -18,16 +19,14 @@ const userSchema = new Schema({
   password: { type: String, required: true }, 
   emailVerified: { type: Boolean, default: false }, 
   fullname : { type : String},
-  socialAccounts: {
-    type: Map,
-    of: String 
-  },
+  profileUrl: {type: String, default: 'https://res.cloudinary.com/dhi0av50m/image/upload/v1726231559/ideas_app/defaultpic_uo8za9.jpg'},
   favorites : [{type : SchemaTypes.ObjectId, ref : 'Idea'}],
   role: { 
     type: String, 
     enum: ['user', 'contributor'], 
     default: 'user' 
   },
+  about : {type : String}
 }, { timestamps: true });
 
 

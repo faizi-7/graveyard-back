@@ -8,10 +8,10 @@ export const validateObjectId = z
   });
 
 export const validateCommentBody
- = z.object({
-  content: z.string().min(1, 'Comment content cannot be empty'),
-  parentId: validateObjectId.optional(),
-});
+  = z.object({
+    content: z.string({message :'Content is required'}).min(1, 'Comment content cannot be empty'),
+    parentId: validateObjectId.optional(),
+  });
 
 // export const validateUser = z.object({
 //   userId: validateObjectId,

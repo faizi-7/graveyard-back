@@ -1,20 +1,21 @@
 import { z } from 'zod';
-import { Types } from 'mongoose';
+import { categories } from '../constants/constants';
 
+const validateTags = (tags: string[]) => tags.every(tag => categories.includes(tag));
 export const validateIdea = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
-  creator: z.string().refine((val) => Types.ObjectId.isValid(val), {
-    message: 'Invalid creator ID',
+  tags: z.array(z.string()).min(1, 'At least one tag is required').refine(validateTags, {
+    message: 'One or more tags are invalid',
   }),
-  tags: z.array(z.string()).min(1, 'At least one tag is required'),
+
   implemented: z.boolean().optional(),
-  isOriginal: z.boolean().default(true),
+  isOriginal: z.enum(["true", "false"]),  
   sourceDescription: z.string().optional(),
   donationQrCodeUrl: z.string().url('Invalid URL').optional(),
 })
   .refine((data) => {
-    if (!data.isOriginal) {
+    if (data.isOriginal == "false") {
       return data.sourceDescription;
     }
     return true;
@@ -24,11 +25,13 @@ export const validateIdea = z.object({
   });
 
 export const validateIdeaUpdate = z.object({
-  implemented: z.boolean().optional(),
-  donationQrCodeUrl: z.string().url("Invalid URL for donation QR code").optional()
+  implemented: z.enum(["true", "false"]),  
 }).strict();
 export const validateVote = z.object({
-  vote: z.enum(['upvote', 'downvote'])
+  vote: z.enum(['upvote', 'downvote'], {
+    errorMap: () => ({ message: 'Invalid vote type, must be either "upvote" or "downvote".' }),
+  })
+  
 });
 
 export const validateComment = z.object({

@@ -4,14 +4,15 @@ import { AppError } from './utils/AppError';
 import authRoutes from './routes/authRoutes'
 import ideaRoutes from './routes/ideaRoutes'
 import commentRoutes from './routes/commentRoutes'
+import cors from 'cors'
 
 const app= express()
 app.use(express.json());
+app.use(cors())
 
-
-
+// Get Test Routes
 app.get('/', (req, res) => {
-  res.send("Hello World!")
+  res.send("API Developed by Faiz Iqbal!")
 })
 
 // Authentication Routes

@@ -24,7 +24,9 @@ export async function checkAuthBasic(req, res, next) {
       userId: currentUser._id,
       username: currentUser.username,
       email: currentUser.email,
-      role: currentUser.role
+      role: currentUser.role,
+      profileUrl : currentUser.profileUrl,
+      emailVerified : currentUser.emailVerified
     };
     req.user = partialUser;
     next();

@@ -37,7 +37,9 @@ const sendMail = async ({ email, subject, htmlContent }: MailOptions) => {
 
 export const sendVerificationEmail = async (email: string, emailToken: string) => {
   const subject = 'Please verify your email...';
-  const htmlContent = `<p>Hello, verify your email address by clicking on this</p>
+  const htmlContent = `<h1>Dont click the link below if the you havent sent this mail!</h1>
+        <br>
+        <p>CAUTION 🚫</p>
         <br>
         <a href="http://localhost:3000/api/auth/verifymailtoken?emailToken=${emailToken}">Click here to verify</a>`;
 
@@ -50,4 +52,33 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string) 
         <a href="http://localhost:3000/api/auth/verifypasstoken?resetToken=${resetToken}">Reset Password Here</a>`;
 
   await sendMail({ email, subject, htmlContent });
+};
+
+
+
+// Send Contact Email from User to me
+interface ContactMailOptions {
+  from: string;
+  to: string;
+  replyTo: string;
+  subject: string;
+  text: string;
+}
+
+export const sentContactMail = async (mailOptions: ContactMailOptions) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: "itsfaiziqbal@gmail.com",
+      pass: process.env.GMAIL_PASS || "",
+    },
+  });
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    throw new AppError('Failed to send email', 500);
+  }
 };
