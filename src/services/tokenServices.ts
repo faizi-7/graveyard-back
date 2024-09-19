@@ -15,7 +15,7 @@ export const signToken = (email: string): string | null => {
     }
 
     return jwt.sign({ email }, secretKey, {
-      expiresIn: '5h',
+      expiresIn: '30d',
     });
 
   } catch (error:any) {
