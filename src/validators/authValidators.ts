@@ -32,5 +32,5 @@ export const validateAuthUpgrade= z.object({
 export const validateMailOptions= z.object({
   name : z.string().min(1, 'Name must be alteast a character long'),
   email: z.string().email('Invalid email address'),
-  message : z.string().min(10, 'Name must be alteast a character long'),
+  message : z.string().min(10, 'Message must be alteast a 10 character long'),
 })

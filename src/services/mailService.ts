@@ -41,7 +41,7 @@ export const sendVerificationEmail = async (email: string, emailToken: string) =
         <br>
         <p>CAUTION 🚫</p>
         <br>
-        <a href="http://localhost:3000/api/auth/verifymailtoken?emailToken=${emailToken}">Click here to verify</a>`;
+        <a href="https://graveyard-back-production.up.railway.app/api/auth/verifymailtoken?emailToken=${emailToken}">Click here to verify</a>`;
 
   await sendMail({ email, subject, htmlContent });
 };
@@ -49,7 +49,7 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string) 
   const subject = 'Reset your password';
   const htmlContent = `<p>You requested a password reset. Click on the link below to reset your password:</p>
         <br>
-        <a href="http://localhost:3000/api/auth/verifypasstoken?resetToken=${resetToken}">Reset Password Here</a>`;
+        <a href="https://graveyard-back-production.up.railway.app/api/auth/verifypasstoken?resetToken=${resetToken}">Reset Password Here</a>`;
 
   await sendMail({ email, subject, htmlContent });
 };
